@@ -14,7 +14,10 @@ import socket, ssl
 import time
 import json
 import os
+
 import paho.mqtt.client as mqtt
+
+from utils import ReturnStatus, Metric, print_result, get_recursively
 
 # Don't use hard coded credentials, try to find a Roomba broadcasting its password
 # See getRoombaPassword comment
@@ -26,9 +29,9 @@ SETTING_ROOMBA_USER = os.getenv('SETTING_ROOMBA_USER', '')
 SETTING_ROOMBA_PASS = os.getenv('SETTING_ROOMBA_PASS', '')
 # This sets the metrics that will be queried along with the reported error thresholds
 SETTING_METRICS = [
-    #displayname, status key, warn_lower:warn_upper, crit_lower:crit_upper
-    ('Battery', 'batPct', '10:', '5:'),
-    ('Wifi_RSSI', 'rssi', '-80:', '-100:'),
+    # Metric, status key
+    (Metric('Battery', 10, None, 5, None), 'batPct'),
+    (Metric('Wifi_RSSI', -80, None, -100, None), 'rssi'),
 ]
 SETTING_TIMEOUT = 10
 
@@ -104,34 +107,6 @@ def getRoombaPassword(addr):
     ssl_sock.close()
     return None
 
-# Helper function for pulling values out of the reported state
-def get_recursively(search_dict, field):
-    """
-    Takes a dict with nested lists and dicts,
-    and searches all dicts for a key of the field
-    provided.
-    """
-    fields_found = []
-
-    for key, value in search_dict.items():
-
-        if key == field:
-            fields_found.append(value)
-
-        elif isinstance(value, dict):
-            results = get_recursively(value, field)
-            for result in results:
-                fields_found.append(result)
-
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, dict):
-                    more_results = get_recursively(item, field)
-                    for another_result in more_results:
-                        fields_found.append(another_result)
-
-    return fields_found
-
 # MQTT Client for getting state from a Roomba
 # In practice the Roomba usually only sends most of its status when first
 # connected to, then mostly sends WiFi status
@@ -157,7 +132,7 @@ class RoombaClient:
             mqttc.connect(addr, ROOMBA_TRACK_PORT, ROOMBA_TRACK_KEEPALIVE)
             self.mqttc = mqttc
         except Exception as e:
-            print(e)
+            # print(e)
             #print("Exception during MQTT connection. The device may not be accepting connections, or the socket may already be in use.")
             self.mqttc = None
 
@@ -231,29 +206,30 @@ def main():
                 password = getRoombaPassword(host)
                 print(f'SETTING_HOST={host} SETTING_ROOMBA_USER={user} SETTING_ROOMBA_PASS={password}')
             except:
-                print(f'3 Roomba - Connection Failure')
+                print_result(ReturnStatus.CRIT, 'Roomba', [], 'Connection Failure')
         else:
             host = SETTING_HOST
             user = SETTING_ROOMBA_USER
             password = SETTING_ROOMBA_PASS
         client = RoombaClient(host, user, password)
         if not client.IsConnected():
-            print(f'3 Roomba - Connection Failure')
+            print_result(ReturnStatus.CRIT, 'Roomba', [], 'Connection Failure')
             return
         fields = [metric[1] for metric in SETTING_METRICS]
         state = client.GetState(fields, SETTING_TIMEOUT)
         #print(state)
-        metrics_strs = []
+        metrics = []
         for metric in SETTING_METRICS:
             tmp = get_recursively(state, metric[1])
-            val = ''
-            if len(tmp) > 0:
-                val = tmp[0]
-            metrics_strs.append(f'{metric[0]}={val};{metric[2]};{metric[3]}')
-        print(f'P Roomba {"|".join(metrics_strs)} Roomba Status')
+            if len(tmp) == 0:
+                tmp = None
+            else:
+                tmp = tmp[0]
+            metrics.append(metric[0].from_value(tmp))
+        print_result(ReturnStatus.PROGRAMATIC, 'Roomba', metrics, 'Roomba Status')
         client.CloseExistingMqtt()
     except Exception as e:
-        print(f'3 Roomba - Script Failure {e}')
+        print_result(ReturnStatus.CRIT, 'Roomba', [], f'Script Failure {e}')
 
 if __name__ == "__main__":
     main()
