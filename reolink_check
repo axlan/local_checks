@@ -33,17 +33,22 @@ SETTING_METRICS = [
     ('motion', [
         (Metric("MotionEvents", None, 2), 'motion'),
     ]),
-    
 ]
 
-def get_motion_events(cam) -> int:
-    return len(cam.get_motion_files(datetime.now() - SETTING_MOTION_PERIOD))
+# Get the local time on the camera
+def get_time(cam: Camera) -> datetime:
+    data = cam.get_dst()[0]['value']['Time']
+    return datetime(data['year'], data['mon'], data['day'], data['hour'], data['min'], data['sec'])
 
-# Disable
+# Get count of motion even files capture in the last SETTING_MOTION_PERIOD
+def get_motion_event_count(cam) -> int:
+    return len(cam.get_motion_files(get_time(cam) - SETTING_MOTION_PERIOD))
+
+# Disable printing to stdout
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
 
-# Restore
+# Restore printing to stdout
 def enablePrint():
     sys.stdout = sys.__stdout__
 
@@ -58,8 +63,10 @@ def main():
             return
         metrics = []
         for cmd in SETTING_METRICS:
+            # For motion metrics get motion count
             if cmd[0] == 'motion':
-                result = {'motion': get_motion_events(cam)}
+                result = {'motion': get_motion_event_count(cam)}
+            # otherwise call the specified command
             else:
                 getter_method = getattr(Camera, cmd[0])
                 result = getter_method(cam)[0]
