@@ -20,7 +20,7 @@ SETTING_HOST = os.getenv('SETTING_HOST', '')
 SETTING_USER = os.getenv('SETTING_USER', '')
 SETTING_PASS = os.getenv('SETTING_PASS', '')
 
-SETTING_MOTION_PERIOD = timedelta(days=1)
+SETTING_MOTION_PERIOD = timedelta(hours=1)
 
 SETTING_METRICS = [
     ('get_hdd_info', [
@@ -31,7 +31,7 @@ SETTING_METRICS = [
     ]),
     # Speical motion metric to count motion files in last day
     ('motion', [
-        (Metric("MotionEvents", None, 10), 'motion'),
+        (Metric("MotionEvents", None, 2), 'motion'),
     ]),
     
 ]
