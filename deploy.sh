@@ -6,6 +6,7 @@ sudo chmod 777 instances/*
 
 sudo cp utils.py $DEPLOY_PATH/scripts/
 
+sudo cp roomba.py $DEPLOY_PATH/scripts/
 sudo cp roomba_check $DEPLOY_PATH/scripts/
 sudo cp instances/roomba_check $DEPLOY_PATH/600/
 
