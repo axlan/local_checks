@@ -1,2 +1,3 @@
 reolinkapi
 paho-mqtt
+python-google-nest

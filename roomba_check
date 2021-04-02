@@ -10,12 +10,8 @@
 # have a service monitoring a roomba. Outputs a string like:
 # "P Roomba Battery=100;10:;5:|Wifi_RSSI=-66;-80:;-100: Roomba Status"
 
-import socket, ssl
 import time
-import json
 import os
-
-import paho.mqtt.client as mqtt
 
 from utils import ReturnStatus, Metric, print_result, get_recursively
 from roomba import broadcastFindRoomba, getRoombaPassword, RoombaClient
