@@ -9,6 +9,7 @@ import time
 import json
 import os
 import sys
+import logging
 
 import nest
 
@@ -18,6 +19,8 @@ SETTING_NAME = os.getenv('SETTING_NAME', "Nest")
 SETTING_CONFIG_FILE = os.environ['SETTING_CONFIG_FILE']
 SETTING_DEVICE_NAME = os.environ['SETTING_DEVICE_NAME']
 
+SETTING_INTERACTIVE = False
+
 SETTING_METRICS = [
     # Metric, evaluation function
     (Metric("Connected", 1, None, None, None), lambda x: int(x['Connectivity']['status'] == 'ONLINE')),
@@ -26,10 +29,27 @@ SETTING_METRICS = [
     (Metric("Temperature", 18, 26, None, None), lambda x: x['Temperature']['ambientTemperatureCelsius']),
 ]
 
+def reautherize_callback(authorization_url):
+    print('Please go to %s and authorize access.' % authorization_url)
+    return input('Enter the full callback URL: ')
+
 def main():
     try:
         with open(SETTING_CONFIG_FILE, 'r') as fd:
             config = json.load(fd)
+
+        if SETTING_INTERACTIVE:
+            logger = logging.getLogger('nest')
+            logger.setLevel(logging.DEBUG)
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                "%(asctime)s %(levelname)s (%(threadName)s) "
+                "[%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.DEBUG)
+            logger.addHandler(console_handler)
+
+            config['reautherize_callback'] = reautherize_callback
 
         with nest.Nest(**config) as nest_api:
             device_traits = nest_api.get_devices(names=[SETTING_DEVICE_NAME])[0].traits
