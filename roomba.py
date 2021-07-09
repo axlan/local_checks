@@ -71,7 +71,11 @@ def broadcastFindRoomba():
 # returns a string with the password if successful
 def getRoombaPassword(addr):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ssl_sock = ssl.wrap_socket(s, ca_certs=None, cert_reqs=ssl.CERT_NONE, ssl_version=ssl.PROTOCOL_TLSv1)
+    context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+    # Either of the following context settings worked for me - choose one
+    # context.set_ciphers('HIGH:!DH:!aNULL')
+    context.set_ciphers('DEFAULT@SECLEVEL=1')
+    ssl_sock = context.wrap_socket(s)
     ssl_sock.connect((addr, ROOMBA_PASS_PORT))
     ssl_sock.send(ROOMBA_PASS_KEY)
     sliceFrom = 11
